@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EliteTraining | IA Deportiva</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Montserrat:wght@300;400;600&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <div id="auth-section" class="auth-container">
+        <div class="auth-box">
+            <h1>ELITE TRAINING</h1>
+            <p>Regístrate para acceder al motor de IA</p>
+            <form id="registroForm">
+                <input type="text" id="regUsuario" required placeholder="Nombre de Atleta">
+                <input type="email" id="regEmail" required placeholder="Correo Electrónico">
+                <input type="password" id="regPass" required placeholder="Contraseña">
+                <button type="submit" class="btn-gold">Crear Cuenta y Entrar</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="main-app" style="display: none;">
+        <nav class="navbar">
+            <div class="logo">ELITE TRAINING</div>
+            <div id="usuario-display" class="user-info"></div>
+        </nav>
+
+        <main>
+            <section class="seccion-generador">
+                <h2>Diseño Físico y Nutricional</h2>
+                <p>Ingresa tu biometría para un análisis preciso.</p>
+                
+                <form id="planForm" class="formulario">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="edad">Edad (años):</label>
+                            <input type="number" id="edad" required min="12" max="80">
+                        </div>
+                        <div class="form-group">
+                            <label for="estatura">Estatura (cm):</label>
+                            <input type="number" id="estatura" required min="100" max="250">
+                        </div>
+                        <div class="form-group">
+                            <label for="peso">Peso (kg):</label>
+                            <input type="number" id="peso" required step="0.1" min="40" max="180">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="complexion">Complexión Física:</label>
+                            <select id="complexion" required>
+                                <option value="Delgada">Delgada (Ectomorfo)</option>
+                                <option value="Atlética">Atlética (Mesomorfo)</option>
+                                <option value="Robusta">Robusta (Endomorfo)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="deporte">Deporte principal:</label>
+                            <select id="deporte" required>
+                                <option value="Fútbol">Fútbol</option>
+                                <option value="Béisbol">Béisbol</option>
+                                <option value="Básquetbol">Básquetbol</option>
+                                <option value="Running">Running</option>
+                                <option value="Gimnasia">Gimnasia</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="action-buttons">
+                        <button type="submit" class="btn-silver" value="rutina">Generar Rutina</button>
+                        <button type="submit" class="btn-silver" value="dieta">Generar Dieta</button>
+                        <button type="submit" class="btn-gold large" value="ambos">Generar Ambos</button>
+                    </div>
+                </form>
+
+                <div id="resultadoPlan" class="resultado-oculto"></div>
+            </section>
+        </main>
+        
+        <footer>
+            <p>Proyecto Final de Programación | &copy; 2026</p>
+        </footer>
+    </div>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>
