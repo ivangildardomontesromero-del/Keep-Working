@@ -24,7 +24,7 @@ def enviar_mensaje_telegram(mensaje):
 # --- MOTOR DE RECORDATORIOS DIARIOS ESPECÍFICOS ---
 def motor_recordatorios():
     while True:
-        time.sleep(86400)  # Espera 24 horas exactas (Para pruebas rápidas puedes poner 60 segundos)
+        time.sleep(86400)  # Espera 24 horas exactas
         
         # Revisa si hay un plan activo para enviar el recordatorio de hoy
         if TELEGRAM_CHAT_ID in planes_activos:
@@ -88,9 +88,8 @@ def generar_plan():
     ejercicios_deporte = banco_ejercicios.get(deporte, ["Acondicionamiento general", "Cardio 30 min", "Fuerza básica"])
     rutina_mensual = {}
     
-    # Generar los 28 días (Entreno 4 días a la semana, 3 de descanso activo)
     for dia in range(1, 29):
-        if dia % 7 in [1, 3, 5, 6]:  # Días de entrenamiento intenso
+        if dia % 7 in [1, 3, 5, 6]: 
             rutina_mensual[dia] = "\n- ".join([""] + ejercicios_deporte) + f"\n- Adaptado para complexión {complexion}"
         else:
             rutina_mensual[dia] = "Descanso activo: Caminata ligera de 30 mins, movilidad articular y estiramientos profundos."
