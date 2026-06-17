@@ -10,6 +10,9 @@ app = Flask(__name__)
 TELEGRAM_BOT_TOKEN = '8739775137:AAHQyQji1XaMNNJTc1q_Yr9zGX4WWyJYwlc'
 TELEGRAM_CHAT_ID = '6736791252'
 
+# Base de datos temporal en memoria para los recordatorios diarios
+planes_activos = {}
+
 def enviar_mensaje_telegram(mensaje):
     url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
     payload = {"chat_id": TELEGRAM_CHAT_ID, "text": mensaje, "parse_mode": "HTML"}
@@ -18,22 +21,30 @@ def enviar_mensaje_telegram(mensaje):
     except Exception as e:
         print(f"Error al enviar Telegram: {e}")
 
-# --- NUEVO: Motor de Recordatorios Programados ---
+# --- MOTOR DE RECORDATORIOS DIARIOS ESPECÍFICOS ---
 def motor_recordatorios():
-    """Función que corre en segundo plano de forma infinita"""
     while True:
-        # Pausa el hilo por 24 horas (86400 segundos)
-        # TIP: Si quieres probar que funciona antes de entregar, cambia 86400 por 60 (1 minuto)
-        time.sleep(86400) 
+        time.sleep(86400)  # Espera 24 horas exactas (Para pruebas rápidas puedes poner 60 segundos)
         
-        mensaje_recordatorio = (
-            "🔔 <b>¡Recordatorio EliteTraining!</b>\n\n"
-            "Han pasado 24 horas. ¡Es momento de mantener la disciplina y cumplir con tu entrenamiento de hoy! "
-            "Revisa tu plan y no pierdas el enfoque. 💪🏃‍♂️"
-        )
-        enviar_mensaje_telegram(mensaje_recordatorio)
+        # Revisa si hay un plan activo para enviar el recordatorio de hoy
+        if TELEGRAM_CHAT_ID in planes_activos:
+            plan = planes_activos[TELEGRAM_CHAT_ID]
+            dia_actual = plan['dia_actual']
+            
+            if dia_actual <= 28:
+                rutina_hoy = plan['rutina_mensual'].get(dia_actual, "Día de recuperación activa. Camina 30 mins y estira.")
+                mensaje_recordatorio = (
+                    f"🔔 <b>¡Recordatorio EliteTraining! - Día {dia_actual}/28</b>\n\n"
+                    f"Hola {plan['usuario']}, ¡es hora de entrenar!\n\n"
+                    f"<b>Tu rutina de hoy:</b>\n{rutina_hoy}\n\n"
+                    "¡Mucha fuerza y disciplina! 💪"
+                )
+                enviar_mensaje_telegram(mensaje_recordatorio)
+                plan['dia_actual'] += 1  # Avanza al siguiente día
+            else:
+                enviar_mensaje_telegram("🏆 <b>¡Felicidades!</b> Has completado tus 4 semanas de entrenamiento. Ve a la plataforma a generar tu nuevo plan mensual.")
+                del planes_activos[TELEGRAM_CHAT_ID] # Borra el plan terminado
 
-# Iniciar el cronómetro en segundo plano al arrancar la app
 hilo_cronometro = threading.Thread(target=motor_recordatorios, daemon=True)
 hilo_cronometro.start()
 
@@ -54,59 +65,68 @@ def generar_plan():
     accion = datos.get('accion', 'ambos')
     usuario = datos.get('usuario', 'Atleta')
     
-    estatura_m = estatura / 100
-    imc = peso / (estatura_m ** 2)
+    # 1. GENERACIÓN DE DIETA ESPECÍFICA
+    imc = peso / ((estatura / 100) ** 2)
+    calorias = int(10 * peso + 6.25 * estatura - 5 * edad + 5)
     
-    calorias_base = 10 * peso + 6.25 * estatura - 5 * edad + 5
     if imc < 18.5:
-        objetivo_dieta = "Superávit calórico (Aumento de masa muscular)"
-        calorias_meta = calorias_base * 1.5 + 400
-        macros = "Proteína: Alta | Carbohidratos: Muy Altos | Grasas: Moderadas"
+        dieta = f"<b>Superávit ({calorias + 400} kcal)</b><br>Desayuno: 4 huevos, avena con plátano y leche.<br>Comida: 200g pechuga, 2 tazas de arroz, aguacate.<br>Cena: Atún, pasta y aceite de oliva."
     elif imc > 25:
-        objetivo_dieta = "Déficit calórico (Pérdida de grasa, preservación muscular)"
-        calorias_meta = calorias_base * 1.5 - 500
-        macros = "Proteína: Muy Alta | Carbohidratos: Moderados a Bajos | Grasas: Saludables"
+        dieta = f"<b>Déficit ({calorias - 500} kcal)</b><br>Desayuno: 3 claras de huevo, espinacas, té verde.<br>Comida: 150g pescado blanco, ensalada verde abundante.<br>Cena: Pechuga asada, brócoli hervido."
     else:
-        objetivo_dieta = "Mantenimiento y recomposición"
-        calorias_meta = calorias_base * 1.5
-        macros = "Proteína: Alta | Carbohidratos: Altos (en torno al entreno) | Grasas: Moderadas"
+        dieta = f"<b>Mantenimiento ({calorias} kcal)</b><br>Desayuno: Omelette de 2 huevos, 1 pan integral.<br>Comida: 150g pollo, 1 taza de quinoa, vegetales.<br>Cena: Salmón, ensalada y papa al horno."
 
-    rutinas_por_deporte = {
-        "Fútbol": "Enfoque en agilidad, sprints cortos (HIIT), cambios de dirección y fuerza explosiva en tren inferior.",
-        "Béisbol": "Enfoque en potencia rotacional del core, fuerza de hombros/brazos y arranques de velocidad explosiva.",
-        "Básquetbol": "Enfoque en pliometría (saltos verticales), resistencia anaeróbica láctica y agilidad lateral.",
-        "Running": "Enfoque en resistencia aeróbica (LISS), umbral de lactato, y fuerza preventiva en rodillas y tobillos.",
-        "Gimnasia": "Enfoque en flexibilidad activa, fuerza isométrica extrema (anillas/barras) y control estricto del core."
+    # 2. GENERACIÓN DE RUTINA DE 28 DÍAS (4 SEMANAS)
+    banco_ejercicios = {
+        "Fútbol": ["Calentamiento articular", "Sprints cortos 10x20m", "Sentadilla con salto 4x12", "Dominio de balón y pases pared 15 min", "Plancha isométrica 4x45 seg"],
+        "Béisbol": ["Rotaciones de torso con banda", "Lanzamientos contra red 4x15", "Desplantes laterales 4x10", "Sprints de base a base (30m)", "Remo con mancuerna 4x12"],
+        "Básquetbol": ["Saltos al cajón (Pliometría) 4x8", "Tiros libres bajo fatiga (50 tiros)", "Desplazamiento defensivo lateral 5x1 min", "Flexiones explosivas 4x10", "Trabajo de pantorrillas 4x20"],
+        "Running": ["Carrera suave (Zona 2) 45 min", "Series en pista: 8x400m al 80%", "Fortalecimiento: Sentadilla búlgara 4x10", "Fartlek (Cambios de ritmo) 30 min", "Tirada larga dominical + estiramiento"],
+        "Gimnasia": ["Estiramiento dinámico avanzado 20 min", "Parada de manos asistida 5x30 seg", "Dominadas estrictas 4x8", "Core en anillas o barra 4x10", "Flexibilidad de spagat 10 min"]
     }
-    enfoque_entreno = rutinas_por_deporte.get(deporte, "Acondicionamiento general")
+    
+    ejercicios_deporte = banco_ejercicios.get(deporte, ["Acondicionamiento general", "Cardio 30 min", "Fuerza básica"])
+    rutina_mensual = {}
+    
+    # Generar los 28 días (Entreno 4 días a la semana, 3 de descanso activo)
+    for dia in range(1, 29):
+        if dia % 7 in [1, 3, 5, 6]:  # Días de entrenamiento intenso
+            rutina_mensual[dia] = "\n- ".join([""] + ejercicios_deporte) + f"\n- Adaptado para complexión {complexion}"
+        else:
+            rutina_mensual[dia] = "Descanso activo: Caminata ligera de 30 mins, movilidad articular y estiramientos profundos."
 
-    html_resultado = f"<div class='resultado-header'><h3>Resultados para {usuario}</h3>"
-    html_resultado += f"<p><strong>Perfil:</strong> {edad} años | {peso}kg | {estatura}cm | Complexión: {complexion}</p>"
-    html_resultado += f"<p><strong>Índice de Masa Corporal (IMC):</strong> {imc:.1f}</p></div>"
+    # 3. GUARDAR EL PLAN EN EL MOTOR DE RECORDATORIOS
+    planes_activos[TELEGRAM_CHAT_ID] = {
+        'usuario': usuario,
+        'deporte': deporte,
+        'dia_actual': 1,
+        'rutina_mensual': rutina_mensual
+    }
+
+    # 4. CONSTRUCCIÓN DEL HTML PARA LA PÁGINA
+    html_resultado = f"<div class='resultado-header'><h3>Plan Mensual para {usuario}</h3>"
+    html_resultado += f"<p><strong>Perfil:</strong> {edad} años | {peso}kg | {estatura}cm | IMC: {imc:.1f}</p></div>"
     
     if accion in ['rutina', 'ambos']:
-        html_resultado += f"<div class='modulo-resultado'><h4>⚙️ Plan de Entrenamiento - {deporte}</h4>"
-        html_resultado += f"<p><strong>Foco Biomecánico:</strong> {enfoque_entreno}</p>"
-        html_resultado += f"<ul><li><strong>Fase 1:</strong> Movilidad articular y calentamiento específico para {deporte}.</li>"
-        html_resultado += f"<li><strong>Fase 2 (Principal):</strong> Desarrollo de {enfoque_entreno.lower()}</li>"
-        html_resultado += f"<li><strong>Fase 3:</strong> Fuerza complementaria adaptada a complexión {complexion.lower()}.</li></ul></div>"
+        html_resultado += f"<div class='modulo-resultado'><h4>⚙️ Rutina - {deporte} (Semanas 1 a 4)</h4>"
+        html_resultado += "<p>El bot te enviará diariamente qué ejercicios tocan. Aquí tienes tu estructura semanal:</p>"
+        html_resultado += f"<ul><li><strong>Días de carga:</strong><br>- { '<br>- '.join(ejercicios_deporte) }</li>"
+        html_resultado += f"<li><strong>Días de recuperación:</strong><br>- Movilidad y estiramientos.</li></ul></div>"
 
     if accion in ['dieta', 'ambos']:
-        html_resultado += f"<div class='modulo-resultado'><h4>🍏 Plan Nutricional</h4>"
-        html_resultado += f"<p><strong>Objetivo:</strong> {objetivo_dieta}</p>"
-        html_resultado += f"<p><strong>Calorías Diarias Estimadas:</strong> {int(calorias_meta)} kcal</p>"
-        html_resultado += f"<p><strong>Distribución:</strong> {macros}</p>"
-        html_resultado += f"<ul><li><strong>Pre-entreno:</strong> Carbohidratos de rápida absorción para optimizar energía en {deporte}.</li>"
-        html_resultado += f"<li><strong>Post-entreno:</strong> Proteína magra para recuperación del tejido muscular.</li></ul></div>"
+        html_resultado += f"<div class='modulo-resultado'><h4>🍏 Plan Nutricional Base</h4>"
+        html_resultado += f"<p>{dieta}</p></div>"
 
-    mensaje_bot = f"🥇 <b>Nuevo plan generado por {usuario}</b>\nDeporte: {deporte}\nAcción: {accion.capitalize()}\nIMC: {imc:.1f}"
+    html_resultado += "<p style='color:var(--gold); font-weight:bold;'>✅ Tu plan de 28 días está guardado. Revisa tu Telegram, el cronómetro ha comenzado.</p>"
+
+    # Notificación inmediata
+    mensaje_bot = f"🥇 <b>¡Plan Mensual Creado!</b>\nHola {usuario}, tu rutina de 28 días de {deporte} está lista. Te enviaré tus ejercicios diariamente por aquí."
     enviar_mensaje_telegram(mensaje_bot)
     
     return jsonify({"plan_html": html_resultado})
 
 @app.route('/ping')
 def ping():
-    # Ruta exclusiva para que UptimeRobot mantenga el servidor despierto
     return "OK", 200
 
 if __name__ == '__main__':
