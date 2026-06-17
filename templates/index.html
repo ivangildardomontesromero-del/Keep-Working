@@ -17,7 +17,7 @@
                 <input type="text" id="regUsuario" required placeholder="Nombre de Atleta">
                 <input type="email" id="regEmail" required placeholder="Correo Electrónico">
                 <input type="password" id="regPass" required placeholder="Contraseña">
-                <button type="submit" class="btn-gold">Crear Cuenta y Entrar</button>
+                <button type="submit" class="btn-gold">Entrar al Sistema</button>
             </form>
         </div>
     </div>
@@ -25,13 +25,22 @@
     <div id="main-app" style="display: none;">
         <nav class="navbar">
             <div class="logo">ELITE TRAINING</div>
-            <div id="usuario-display" class="user-info"></div>
+            <div class="user-info">
+                <span id="usuario-display"></span>
+                <button id="btnLogout" class="btn-logout">Cerrar Sesión</button>
+            </div>
         </nav>
 
         <main>
+            <div style="text-align: center; margin-top: 20px;">
+                <a href="https://t.me/Katleticbot" target="_blank" class="btn-telegram">
+                    🤖 Ir a Katleticbot en Telegram
+                </a>
+            </div>
+
             <section class="seccion-generador">
-                <h2>Diseño Físico y Nutricional</h2>
-                <p>Ingresa tu biometría para un análisis preciso.</p>
+                <h2>Diseño de Ciclo Mensual</h2>
+                <p>Ingresa tu biometría para generar tus 4 semanas de dieta y ejercicios específicos.</p>
                 
                 <form id="planForm" class="formulario">
                     <div class="form-row">
@@ -71,9 +80,9 @@
                     </div>
 
                     <div class="action-buttons">
-                        <button type="submit" class="btn-silver" value="rutina">Generar Rutina</button>
-                        <button type="submit" class="btn-silver" value="dieta">Generar Dieta</button>
-                        <button type="submit" class="btn-gold large" value="ambos">Generar Ambos</button>
+                        <button type="submit" class="btn-silver" value="rutina">Mes de Rutina</button>
+                        <button type="submit" class="btn-silver" value="dieta">Mes de Dieta</button>
+                        <button type="submit" class="btn-gold large" value="ambos">Generar Ciclo Completo</button>
                     </div>
                 </form>
 
