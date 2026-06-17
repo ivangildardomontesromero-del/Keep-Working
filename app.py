@@ -1,3 +1,5 @@
+import threading
+import time
 from flask import Flask, render_template, request, jsonify
 import requests
 import os
@@ -6,7 +8,7 @@ app = Flask(__name__)
 
 # --- CONFIGURACIÓN DEL BOT DE TELEGRAM ---
 TELEGRAM_BOT_TOKEN = '8739775137:AAHQyQji1XaMNNJTc1q_Yr9zGX4WWyJYwlc'
-TELEGRAM_CHAT_ID = '6736791252'  # Integrado exitosamente
+TELEGRAM_CHAT_ID = '6736791252'
 
 def enviar_mensaje_telegram(mensaje):
     url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
@@ -16,6 +18,26 @@ def enviar_mensaje_telegram(mensaje):
     except Exception as e:
         print(f"Error al enviar Telegram: {e}")
 
+# --- NUEVO: Motor de Recordatorios Programados ---
+def motor_recordatorios():
+    """Función que corre en segundo plano de forma infinita"""
+    while True:
+        # Pausa el hilo por 24 horas (86400 segundos)
+        # TIP: Si quieres probar que funciona antes de entregar, cambia 86400 por 60 (1 minuto)
+        time.sleep(86400) 
+        
+        mensaje_recordatorio = (
+            "🔔 <b>¡Recordatorio EliteTraining!</b>\n\n"
+            "Han pasado 24 horas. ¡Es momento de mantener la disciplina y cumplir con tu entrenamiento de hoy! "
+            "Revisa tu plan y no pierdas el enfoque. 💪🏃‍♂️"
+        )
+        enviar_mensaje_telegram(mensaje_recordatorio)
+
+# Iniciar el cronómetro en segundo plano al arrancar la app
+hilo_cronometro = threading.Thread(target=motor_recordatorios, daemon=True)
+hilo_cronometro.start()
+
+# --- RUTAS DE LA APLICACIÓN WEB ---
 @app.route('/')
 def index():
     return render_template('index.html')
@@ -24,20 +46,17 @@ def index():
 def generar_plan():
     datos = request.json
     
-    # Recolección de datos
     edad = int(datos.get('edad', 20))
     peso = float(datos.get('peso', 70))
     estatura = float(datos.get('estatura', 170))
     complexion = datos.get('complexion', 'Atlética')
     deporte = datos.get('deporte', 'Running')
-    accion = datos.get('accion', 'ambos') # rutina, dieta, o ambos
+    accion = datos.get('accion', 'ambos')
     usuario = datos.get('usuario', 'Atleta')
     
-    # --- CÁLCULOS FÍSICOS DE LA IA ---
     estatura_m = estatura / 100
     imc = peso / (estatura_m ** 2)
     
-    # Lógica Nutricional
     calorias_base = 10 * peso + 6.25 * estatura - 5 * edad + 5
     if imc < 18.5:
         objetivo_dieta = "Superávit calórico (Aumento de masa muscular)"
@@ -52,7 +71,6 @@ def generar_plan():
         calorias_meta = calorias_base * 1.5
         macros = "Proteína: Alta | Carbohidratos: Altos (en torno al entreno) | Grasas: Moderadas"
 
-    # Lógica Deportiva (Entrenamiento)
     rutinas_por_deporte = {
         "Fútbol": "Enfoque en agilidad, sprints cortos (HIIT), cambios de dirección y fuerza explosiva en tren inferior.",
         "Béisbol": "Enfoque en potencia rotacional del core, fuerza de hombros/brazos y arranques de velocidad explosiva.",
@@ -60,10 +78,8 @@ def generar_plan():
         "Running": "Enfoque en resistencia aeróbica (LISS), umbral de lactato, y fuerza preventiva en rodillas y tobillos.",
         "Gimnasia": "Enfoque en flexibilidad activa, fuerza isométrica extrema (anillas/barras) y control estricto del core."
     }
-    
     enfoque_entreno = rutinas_por_deporte.get(deporte, "Acondicionamiento general")
 
-    # --- CONSTRUCCIÓN DEL RESULTADO ---
     html_resultado = f"<div class='resultado-header'><h3>Resultados para {usuario}</h3>"
     html_resultado += f"<p><strong>Perfil:</strong> {edad} años | {peso}kg | {estatura}cm | Complexión: {complexion}</p>"
     html_resultado += f"<p><strong>Índice de Masa Corporal (IMC):</strong> {imc:.1f}</p></div>"
@@ -83,7 +99,6 @@ def generar_plan():
         html_resultado += f"<ul><li><strong>Pre-entreno:</strong> Carbohidratos de rápida absorción para optimizar energía en {deporte}.</li>"
         html_resultado += f"<li><strong>Post-entreno:</strong> Proteína magra para recuperación del tejido muscular.</li></ul></div>"
 
-    # Notificación Telegram
     mensaje_bot = f"🥇 <b>Nuevo plan generado por {usuario}</b>\nDeporte: {deporte}\nAcción: {accion.capitalize()}\nIMC: {imc:.1f}"
     enviar_mensaje_telegram(mensaje_bot)
     
@@ -91,6 +106,7 @@ def generar_plan():
 
 @app.route('/ping')
 def ping():
+    # Ruta exclusiva para que UptimeRobot mantenga el servidor despierto
     return "OK", 200
 
 if __name__ == '__main__':
